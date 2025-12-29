@@ -4,8 +4,7 @@ use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashSet};
 
 use crate::algorithms::{
-    pick_least_connections, pick_least_response_time, pick_round_robin,
-    pick_weighted_round_robin,
+    pick_least_connections, pick_least_response_time, pick_round_robin, pick_weighted_round_robin,
 };
 use crate::error::{SimError, SimResult};
 use crate::models::{AlgoConfig, RequestProfile, ServerConfig, SimConfig, TieBreakConfig};

@@ -4,9 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::error::{SimError, SimResult};
-use crate::models::{
-    AlgoConfig, RequestProfile, ServerConfig, SimConfig, TieBreakConfig,
-};
+use crate::models::{AlgoConfig, RequestProfile, ServerConfig, SimConfig, TieBreakConfig};
 
 #[derive(Parser, Debug)]
 #[command(name = "load-balancer-cli")]

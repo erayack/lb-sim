@@ -113,7 +113,11 @@ mod tests {
 
     #[test]
     fn least_connections_tiebreaks_stably_without_seed() {
-        let servers = vec![state_at(0, "a", 1, 0), state_at(1, "b", 2, 0), state_at(2, "c", 1, 0)];
+        let servers = vec![
+            state_at(0, "a", 1, 0),
+            state_at(1, "b", 2, 0),
+            state_at(2, "c", 1, 0),
+        ];
         let idx = pick_least_connections(&servers, None);
         assert_eq!(idx, 0);
     }
@@ -149,7 +153,11 @@ mod tests {
 
     #[test]
     fn least_connections_uses_seeded_tiebreak() {
-        let servers = vec![state_at(0, "a", 1, 0), state_at(1, "b", 1, 0), state_at(2, "c", 1, 0)];
+        let servers = vec![
+            state_at(0, "a", 1, 0),
+            state_at(1, "b", 1, 0),
+            state_at(2, "c", 1, 0),
+        ];
         let candidates = [0usize, 1, 2];
         let mut rng = StdRng::seed_from_u64(42);
         let expected = {
@@ -180,7 +188,11 @@ mod tests {
                 weight: 1,
             },
         ];
-        let states = vec![state_at(0, "a", 0, 0), state_at(1, "b", 0, 0), state_at(2, "c", 0, 0)];
+        let states = vec![
+            state_at(0, "a", 0, 0),
+            state_at(1, "b", 0, 0),
+            state_at(2, "c", 0, 0),
+        ];
         let candidates = [0usize, 1];
         let mut rng = StdRng::seed_from_u64(99);
         let expected = {
