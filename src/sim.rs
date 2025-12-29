@@ -1,7 +1,7 @@
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::cmp::Reverse;
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashMap};
 
 use crate::models::{Algorithm, Assignment, Server, ServerSummary, SimulationResult, TieBreak};
 
@@ -25,12 +25,21 @@ impl PartialOrd for InFlight {
     }
 }
 
-pub fn run_simulation(
+pub(crate) fn run_simulation(
     mut servers: Vec<Server>,
     algo: Algorithm,
     request_count: usize,
     tie_break: TieBreak,
-) -> SimulationResult {
+) -> Result<SimulationResult, String> {
+    if servers.is_empty() {
+        return Err("servers must not be empty".to_string());
+    }
+    let mut id_to_index = HashMap::new();
+    for (idx, server) in servers.iter().enumerate() {
+        if id_to_index.insert(server.id, idx).is_some() {
+            return Err(format!("duplicate server id {}", server.id));
+        }
+    }
     let mut assignments = Vec::with_capacity(request_count);
     let mut rng = match &tie_break {
         TieBreak::Seeded(seed) => Some(StdRng::seed_from_u64(*seed)),
@@ -81,7 +90,10 @@ pub fn run_simulation(
 
     let mut counts = vec![0u32; servers.len()];
     for assignment in &assignments {
-        counts[assignment.server_id] += 1;
+        let idx = id_to_index
+            .get(&assignment.server_id)
+            .expect("assignment server_id missing from servers");
+        counts[*idx] += 1;
     }
 
     let totals = servers
@@ -93,11 +105,11 @@ pub fn run_simulation(
         })
         .collect();
 
-    SimulationResult {
+    Ok(SimulationResult {
         assignments,
         totals,
         tie_break,
-    }
+    })
 }
 
 fn pick_round_robin(next_idx: &mut usize, len: usize) -> usize {
@@ -209,7 +221,8 @@ mod tests {
             Server::test_at(0, "fast", 1, 0, 0),
             Server::test_at(1, "slow", 100, 0, 0),
         ];
-        let result = run_simulation(servers, Algorithm::LeastConnections, 2, TieBreak::Stable);
+        let result = run_simulation(servers, Algorithm::LeastConnections, 2, TieBreak::Stable)
+            .expect("simulation should succeed");
         let assigned = result
             .assignments
             .iter()
@@ -238,12 +251,29 @@ mod tests {
             Server::test_at(1, "db", 20, 0, 0),
             Server::test_at(2, "cache", 30, 0, 0),
         ];
-        let result = run_simulation(servers, Algorithm::RoundRobin, 2, TieBreak::Stable);
+        let result = run_simulation(servers, Algorithm::RoundRobin, 2, TieBreak::Stable)
+            .expect("simulation should succeed");
         let names: Vec<&str> = result
             .totals
             .iter()
             .map(|summary| summary.name.as_str())
             .collect();
         assert_eq!(names, vec!["api", "db", "cache"]);
+    }
+
+    #[test]
+    fn duplicate_server_ids_error() {
+        let servers = vec![
+            Server::test_at(1, "a", 10, 0, 0),
+            Server::test_at(1, "b", 20, 0, 0),
+        ];
+        let result = run_simulation(servers, Algorithm::RoundRobin, 1, TieBreak::Stable);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn empty_servers_error() {
+        let result = run_simulation(Vec::new(), Algorithm::RoundRobin, 1, TieBreak::Stable);
+        assert!(result.is_err());
     }
 }

@@ -26,7 +26,7 @@ fn run() -> Result<(), String> {
         Some(seed) => TieBreak::Seeded(seed),
         None => TieBreak::Stable,
     };
-    let result = sim::run_simulation(servers, algo, args.requests, tie_break);
+    let result = sim::run_simulation(servers, algo, args.requests, tie_break)?;
 
     if args.summary {
         print_summary(&result);
