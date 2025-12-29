@@ -1,7 +1,7 @@
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
-use crate::models::{Algorithm, Assignment, Server, SimulationResult, TieBreak};
+use crate::models::{Algorithm, Assignment, Server, ServerSummary, SimulationResult, TieBreak};
 
 pub fn run_simulation(
     mut servers: Vec<Server>,
@@ -48,7 +48,10 @@ pub fn run_simulation(
     let totals = servers
         .iter()
         .zip(counts)
-        .map(|(server, count)| (server.name.clone(), count))
+        .map(|(server, count)| ServerSummary {
+            name: server.name.clone(),
+            requests: count,
+        })
         .collect();
 
     SimulationResult {
@@ -172,5 +175,21 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(7);
         let actual = pick_index(&candidates, Some(&mut rng));
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn summary_preserves_input_order() {
+        let servers = vec![
+            Server::test_at(0, "api", 10, 0),
+            Server::test_at(1, "db", 20, 0),
+            Server::test_at(2, "cache", 30, 0),
+        ];
+        let result = run_simulation(servers, Algorithm::RoundRobin, 2, TieBreak::Stable);
+        let names: Vec<&str> = result
+            .totals
+            .iter()
+            .map(|summary| summary.name.as_str())
+            .collect();
+        assert_eq!(names, vec!["api", "db", "cache"]);
     }
 }
