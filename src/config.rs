@@ -1,4 +1,4 @@
-use clap::{Parser, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -7,8 +7,33 @@ use crate::error::{SimError, SimResult};
 use crate::models::{AlgoConfig, RequestProfile, ServerConfig, SimConfig, TieBreakConfig};
 
 #[derive(Parser, Debug)]
-#[command(name = "load-balancer-cli")]
-pub struct Args {
+#[command(
+    name = "load-balancer-cli",
+    subcommand_required = true,
+    arg_required_else_help = true
+)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Command,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    Run(RunArgs),
+    ListAlgorithms,
+    ShowConfig(SimArgs),
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct RunArgs {
+    #[command(flatten)]
+    pub sim: SimArgs,
+    #[arg(long)]
+    pub summary: bool,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct SimArgs {
     #[arg(long, value_enum)]
     pub algo: Option<AlgoArg>,
     #[arg(long)]
@@ -17,8 +42,6 @@ pub struct Args {
     pub server: Vec<String>,
     #[arg(long)]
     pub requests: Option<usize>,
-    #[arg(long)]
-    pub summary: bool,
     #[arg(
         long,
         help = "Seed tie-breaks for least-connections/response-time; omit for stable input-order tie-breaks"
@@ -47,12 +70,12 @@ impl From<AlgoArg> for AlgoConfig {
     }
 }
 
-pub fn parse_args() -> SimResult<Args> {
-    Args::try_parse().map_err(|e| SimError::Cli(e.to_string()))
+pub fn parse_cli() -> SimResult<Cli> {
+    Cli::try_parse().map_err(|e| SimError::Cli(e.to_string()))
 }
 
-pub fn build_config(args: Args) -> SimResult<(SimConfig, bool)> {
-    let mut config = if let Some(path) = args.config {
+pub fn build_config(args: &SimArgs) -> SimResult<SimConfig> {
+    let mut config = if let Some(path) = args.config.as_ref() {
         load_config(&path)?
     } else {
         let algo = args
@@ -67,16 +90,13 @@ pub fn build_config(args: Args) -> SimResult<(SimConfig, bool)> {
         } else {
             TieBreakConfig::Stable
         };
-        return Ok((
-            SimConfig {
-                servers,
-                requests: RequestProfile::FixedCount(requests),
-                algo: algo.into(),
-                tie_break,
-                seed: args.seed,
-            },
-            args.summary,
-        ));
+        return Ok(SimConfig {
+            servers,
+            requests: RequestProfile::FixedCount(requests),
+            algo: algo.into(),
+            tie_break,
+            seed: args.seed,
+        });
     };
 
     if let Some(algo) = args.algo {
@@ -93,7 +113,7 @@ pub fn build_config(args: Args) -> SimResult<(SimConfig, bool)> {
         config.tie_break = TieBreakConfig::Seeded;
     }
 
-    Ok((config, args.summary))
+    Ok(config)
 }
 
 pub fn load_config(path: &Path) -> SimResult<SimConfig> {

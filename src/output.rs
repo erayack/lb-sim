@@ -1,5 +1,5 @@
 use crate::error::{SimError, SimResult};
-use crate::models::{SimConfig, TieBreakConfig};
+use crate::models::{AlgoConfig, RequestProfile, SimConfig, TieBreakConfig};
 use crate::state::SimulationResult;
 
 pub fn print_summary(result: &SimulationResult) {
@@ -45,4 +45,42 @@ pub fn print_full(config: &SimConfig, result: &SimulationResult) -> SimResult<()
     print_summary(result);
 
     Ok(())
+}
+
+pub fn print_config(config: &SimConfig) {
+    println!("Algorithm: {}", algo_name(&config.algo));
+    println!("Requests: {}", format_requests(&config.requests));
+    println!("Tie-break: {}", format_tie_break(&config.tie_break, config.seed));
+    println!("Servers:");
+    for server in &config.servers {
+        println!(
+            "- {} (latency: {}ms, weight: {})",
+            server.name, server.base_latency_ms, server.weight
+        );
+    }
+}
+
+fn algo_name(algo: &AlgoConfig) -> &'static str {
+    match algo {
+        AlgoConfig::RoundRobin => "round-robin",
+        AlgoConfig::WeightedRoundRobin => "weighted-round-robin",
+        AlgoConfig::LeastConnections => "least-connections",
+        AlgoConfig::LeastResponseTime => "least-response-time",
+    }
+}
+
+fn format_requests(profile: &RequestProfile) -> String {
+    match profile {
+        RequestProfile::FixedCount(count) => count.to_string(),
+        RequestProfile::Poisson { rate, duration_ms } => {
+            format!("poisson(rate={}, duration_ms={})", rate, duration_ms)
+        }
+    }
+}
+
+fn format_tie_break(tie_break: &TieBreakConfig, seed: Option<u64>) -> String {
+    match tie_break {
+        TieBreakConfig::Stable => "stable".to_string(),
+        TieBreakConfig::Seeded => format!("seeded({})", seed.unwrap_or_default()),
+    }
 }

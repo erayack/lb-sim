@@ -1,7 +1,14 @@
-use load_balancer_cli::config;
+use load_balancer_cli::config::{self, Command};
 use load_balancer_cli::engine;
 use load_balancer_cli::error::SimResult;
 use load_balancer_cli::output;
+
+const ALGORITHMS: [&str; 4] = [
+    "round-robin",
+    "weighted-round-robin",
+    "least-connections",
+    "least-response-time",
+];
 
 fn main() {
     if let Err(err) = run() {
@@ -11,16 +18,29 @@ fn main() {
 }
 
 fn run() -> SimResult<()> {
-    let args = config::parse_args()?;
-    let (config, summary_only) = config::build_config(args)?;
-    let result = engine::run_simulation(&config)?;
+    match config::parse_cli()?.command {
+        Command::Run(args) => {
+            let config = config::build_config(&args.sim)?;
+            let result = engine::run_simulation(&config)?;
 
-    if summary_only {
-        output::print_summary(&result);
-        return Ok(());
+            if args.summary {
+                output::print_summary(&result);
+                return Ok(());
+            }
+
+            output::print_full(&config, &result)?;
+            Ok(())
+        }
+        Command::ListAlgorithms => {
+            for name in ALGORITHMS {
+                println!("{}", name);
+            }
+            Ok(())
+        }
+        Command::ShowConfig(args) => {
+            let config = config::build_config(&args)?;
+            output::print_config(&config);
+            Ok(())
+        }
     }
-
-    output::print_full(&config, &result)?;
-
-    Ok(())
 }
