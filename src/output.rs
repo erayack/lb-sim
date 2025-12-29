@@ -1,4 +1,4 @@
-use crate::models::{Assignment, ServerSummary, SimulationResult};
+use crate::state::{Assignment, ServerSummary, SimulationResult};
 
 pub trait Formatter {
     fn write(&self, result: &SimulationResult) -> String;
@@ -72,7 +72,7 @@ fn write_summary(output: &mut String, totals: &[ServerSummary]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Assignment, RunMetadata, ServerSummary, SimulationResult};
+    use crate::state::{Assignment, RunMetadata, ServerSummary, SimulationResult};
 
     fn sample_result() -> SimulationResult {
         SimulationResult {
@@ -139,9 +139,9 @@ mod tests {
       "request_id": 1,
       "server_id": 0,
       "server_name": "api",
-      "score": 10,
       "started_at": 0,
-      "completed_at": 10
+      "completed_at": 10,
+      "score": 10
     }
   ],
   "totals": [

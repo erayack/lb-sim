@@ -1,0 +1,47 @@
+use serde::Serialize;
+
+#[derive(Clone, Debug)]
+pub struct ServerState {
+    pub id: usize,
+    pub name: String,
+    pub active_connections: u32,
+    pub pick_count: u32,
+    pub in_flight: u32,
+}
+
+#[derive(Clone, Debug)]
+pub struct Request {
+    pub id: usize,
+    pub arrival_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Assignment {
+    pub request_id: usize,
+    pub server_id: usize,
+    pub server_name: String,
+    pub started_at: u64,
+    pub completed_at: u64,
+    pub score: Option<u64>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ServerSummary {
+    pub name: String,
+    pub requests: u32,
+    pub avg_response_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct RunMetadata {
+    pub algo: String,
+    pub tie_break: String,
+    pub duration_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SimulationResult {
+    pub assignments: Vec<Assignment>,
+    pub totals: Vec<ServerSummary>,
+    pub metadata: RunMetadata,
+}
