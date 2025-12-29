@@ -55,6 +55,8 @@ pub struct Server {
     pub pick_count: u32,
 }
 
+pub type ServerState = Server;
+
 #[cfg(test)]
 impl Server {
     pub fn test_at(
@@ -107,6 +109,20 @@ pub struct Assignment {
     pub score: Option<u64>,
     pub started_at: u64,
     pub completed_at: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct SimConfig {
+    pub servers: Vec<Server>,
+    pub requests: usize,
+    pub tie_break: TieBreak,
+}
+
+#[derive(Clone, Debug)]
+pub struct EngineState {
+    pub time_ms: u64,
+    pub servers: Vec<ServerState>,
+    pub assignments: Vec<Assignment>,
 }
 
 #[derive(Clone, Debug)]

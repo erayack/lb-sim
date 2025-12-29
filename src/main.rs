@@ -1,8 +1,12 @@
+mod algorithms;
 mod cli;
+mod engine;
+mod events;
 mod models;
-mod sim;
 
-use crate::models::{Algorithm, SimError, SimResult, SimulationResult, TieBreak};
+use crate::algorithms::build_strategy;
+use crate::engine::SimulationEngine;
+use crate::models::{Algorithm, SimConfig, SimError, SimResult, SimulationResult, TieBreak};
 
 fn main() {
     if let Err(err) = run() {
@@ -23,7 +27,14 @@ fn run() -> SimResult<()> {
         Some(seed) => TieBreak::Seeded(seed),
         None => TieBreak::Stable,
     };
-    let result = sim::run_simulation(servers, algo, args.requests, tie_break)?;
+    let config = SimConfig {
+        servers,
+        requests: args.requests,
+        tie_break,
+    };
+    let strategy = build_strategy(algo);
+    let mut engine = SimulationEngine::new(config, strategy);
+    let result = engine.run()?;
 
     if args.summary {
         print_summary(&result);
