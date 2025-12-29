@@ -65,6 +65,9 @@ pub(crate) fn run_simulation(
 
         let (server_idx, score) = match algo {
             Algorithm::RoundRobin => (pick_round_robin(&mut next_idx, servers.len()), None),
+            Algorithm::WeightedRoundRobin => {
+                (pick_weighted_round_robin(&mut next_idx, &servers), None)
+            }
             Algorithm::LeastConnections => {
                 let idx = pick_least_connections(&servers, rng.as_mut());
                 (idx, None)
@@ -118,6 +121,26 @@ fn pick_round_robin(next_idx: &mut usize, len: usize) -> usize {
     let idx = *next_idx;
     *next_idx = (*next_idx + 1) % len;
     idx
+}
+
+fn pick_weighted_round_robin(next_idx: &mut usize, servers: &[Server]) -> usize {
+    let total_weight: u64 = servers.iter().map(|server| server.weight as u64).sum();
+    if total_weight == 0 {
+        return 0;
+    }
+
+    let target = (*next_idx as u64) % total_weight;
+    *next_idx = (*next_idx + 1) % (total_weight as usize);
+
+    let mut cursor = 0u64;
+    for (idx, server) in servers.iter().enumerate() {
+        cursor += server.weight as u64;
+        if target < cursor {
+            return idx;
+        }
+    }
+
+    0
 }
 
 fn pick_least_connections(servers: &[Server], rng: Option<&mut StdRng>) -> usize {
@@ -186,9 +209,9 @@ mod tests {
     #[test]
     fn least_connections_prefers_lowest_active_connections() {
         let servers = vec![
-            Server::test_at(0, "a", 10, 3, 0),
-            Server::test_at(1, "b", 10, 1, 0),
-            Server::test_at(2, "c", 10, 2, 0),
+            Server::test_at(0, "a", 10, 1, 3, 0),
+            Server::test_at(1, "b", 10, 1, 1, 0),
+            Server::test_at(2, "c", 10, 1, 2, 0),
         ];
         let idx = pick_least_connections(&servers, None);
         assert_eq!(idx, 1);
@@ -197,9 +220,9 @@ mod tests {
     #[test]
     fn least_connections_tiebreaks_stably_without_seed() {
         let servers = vec![
-            Server::test_at(0, "a", 10, 1, 0),
-            Server::test_at(1, "b", 10, 2, 0),
-            Server::test_at(2, "c", 10, 1, 0),
+            Server::test_at(0, "a", 10, 1, 1, 0),
+            Server::test_at(1, "b", 10, 1, 2, 0),
+            Server::test_at(2, "c", 10, 1, 1, 0),
         ];
         let idx = pick_least_connections(&servers, None);
         assert_eq!(idx, 0);
@@ -208,9 +231,9 @@ mod tests {
     #[test]
     fn least_response_time_prefers_lowest_score() {
         let servers = vec![
-            Server::test_at(0, "a", 30, 0, 0),
-            Server::test_at(1, "b", 10, 0, 2),
-            Server::test_at(2, "c", 20, 0, 0),
+            Server::test_at(0, "a", 30, 1, 0, 0),
+            Server::test_at(1, "b", 10, 1, 0, 2),
+            Server::test_at(2, "c", 20, 1, 0, 0),
         ];
         let (idx, score) = pick_least_response_time(&servers, None);
         assert_eq!(idx, 2);
@@ -220,9 +243,9 @@ mod tests {
     #[test]
     fn least_connections_uses_seeded_tiebreak() {
         let servers = vec![
-            Server::test_at(0, "a", 10, 1, 0),
-            Server::test_at(1, "b", 10, 1, 0),
-            Server::test_at(2, "c", 10, 1, 0),
+            Server::test_at(0, "a", 10, 1, 1, 0),
+            Server::test_at(1, "b", 10, 1, 1, 0),
+            Server::test_at(2, "c", 10, 1, 1, 0),
         ];
         let candidates = [0usize, 1, 2];
         let mut rng = StdRng::seed_from_u64(42);
@@ -238,9 +261,9 @@ mod tests {
     #[test]
     fn least_response_time_uses_seeded_tiebreak() {
         let servers = vec![
-            Server::test_at(0, "a", 10, 0, 0),
-            Server::test_at(1, "b", 0, 0, 1),
-            Server::test_at(2, "c", 20, 0, 0),
+            Server::test_at(0, "a", 10, 1, 0, 0),
+            Server::test_at(1, "b", 0, 1, 0, 1),
+            Server::test_at(2, "c", 20, 1, 0, 0),
         ];
         let candidates = [0usize, 1];
         let mut rng = StdRng::seed_from_u64(99);
@@ -257,8 +280,8 @@ mod tests {
     #[test]
     fn least_connections_accounts_for_completed_requests() {
         let servers = vec![
-            Server::test_at(0, "fast", 1, 0, 0),
-            Server::test_at(1, "slow", 100, 0, 0),
+            Server::test_at(0, "fast", 1, 1, 0, 0),
+            Server::test_at(1, "slow", 100, 1, 0, 0),
         ];
         let result = run_simulation(servers, Algorithm::LeastConnections, 2, TieBreak::Stable)
             .expect("simulation should succeed");
@@ -286,9 +309,9 @@ mod tests {
     #[test]
     fn summary_preserves_input_order() {
         let servers = vec![
-            Server::test_at(0, "api", 10, 0, 0),
-            Server::test_at(1, "db", 20, 0, 0),
-            Server::test_at(2, "cache", 30, 0, 0),
+            Server::test_at(0, "api", 10, 1, 0, 0),
+            Server::test_at(1, "db", 20, 1, 0, 0),
+            Server::test_at(2, "cache", 30, 1, 0, 0),
         ];
         let result = run_simulation(servers, Algorithm::RoundRobin, 2, TieBreak::Stable)
             .expect("simulation should succeed");
@@ -303,8 +326,8 @@ mod tests {
     #[test]
     fn duplicate_server_ids_error() {
         let servers = vec![
-            Server::test_at(1, "a", 10, 0, 0),
-            Server::test_at(1, "b", 20, 0, 0),
+            Server::test_at(1, "a", 10, 1, 0, 0),
+            Server::test_at(1, "b", 20, 1, 0, 0),
         ];
         let result = run_simulation(servers, Algorithm::RoundRobin, 1, TieBreak::Stable);
         assert!(result.is_err());
@@ -314,5 +337,18 @@ mod tests {
     fn empty_servers_error() {
         let result = run_simulation(Vec::new(), Algorithm::RoundRobin, 1, TieBreak::Stable);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn weighted_round_robin_respects_weights() {
+        let servers = vec![
+            Server::test_at(0, "a", 10, 2, 0, 0),
+            Server::test_at(1, "b", 10, 1, 0, 0),
+        ];
+        let mut cursor = 0usize;
+        let picks: Vec<usize> = (0..6)
+            .map(|_| pick_weighted_round_robin(&mut cursor, &servers))
+            .collect();
+        assert_eq!(picks, vec![0, 0, 1, 0, 0, 1]);
     }
 }

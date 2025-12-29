@@ -9,6 +9,8 @@ pub enum SimError {
     InvalidServerEntry(String),
     InvalidLatency(String),
     InvalidLatencyValue(String),
+    InvalidWeight(String),
+    InvalidWeightValue(String),
     EmptyServerEntry,
     Cli(String),
 }
@@ -27,12 +29,16 @@ impl fmt::Display for SimError {
             }
             SimError::InvalidServerEntry(entry) => write!(
                 f,
-                "invalid server entry '{}': expected name:latency_ms",
+                "invalid server entry '{}': expected name:latency_ms[:weight]",
                 entry
             ),
             SimError::InvalidLatency(entry) => write!(f, "invalid latency in '{}'", entry),
             SimError::InvalidLatencyValue(entry) => {
                 write!(f, "latency must be > 0 in '{}'", entry)
+            }
+            SimError::InvalidWeight(entry) => write!(f, "invalid weight in '{}'", entry),
+            SimError::InvalidWeightValue(entry) => {
+                write!(f, "weight must be > 0 in '{}'", entry)
             }
             SimError::Cli(message) => write!(f, "{}", message),
         }
@@ -44,6 +50,7 @@ pub struct Server {
     pub id: usize,
     pub name: String,
     pub base_latency_ms: u64,
+    pub weight: u32,
     pub active_connections: u32,
     pub pick_count: u32,
 }
@@ -54,6 +61,7 @@ impl Server {
         index: usize,
         name: &str,
         latency: u64,
+        weight: u32,
         active_connections: u32,
         pick_count: u32,
     ) -> Self {
@@ -61,6 +69,7 @@ impl Server {
             id: index,
             name: name.to_string(),
             base_latency_ms: latency,
+            weight,
             active_connections,
             pick_count,
         }
@@ -70,6 +79,7 @@ impl Server {
 #[derive(Clone, Debug)]
 pub enum Algorithm {
     RoundRobin,
+    WeightedRoundRobin,
     LeastConnections,
     LeastResponseTime,
 }
