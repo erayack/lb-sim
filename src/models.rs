@@ -34,6 +34,12 @@ pub enum Algorithm {
 }
 
 #[derive(Clone, Debug)]
+pub enum TieBreak {
+    Stable,
+    Seeded(u64),
+}
+
+#[derive(Clone, Debug)]
 pub struct Assignment {
     pub request_id: usize,
     pub server_id: usize,
@@ -42,7 +48,14 @@ pub struct Assignment {
 }
 
 #[derive(Clone, Debug)]
+pub struct ServerSummary {
+    pub name: String,
+    pub requests: u32,
+}
+
+#[derive(Clone, Debug)]
 pub struct SimulationResult {
     pub assignments: Vec<Assignment>,
-    pub totals: Vec<(String, u32)>,
+    pub totals: Vec<ServerSummary>,
+    pub tie_break: TieBreak,
 }

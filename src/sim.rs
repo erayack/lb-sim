@@ -3,7 +3,7 @@ use rand::{Rng, SeedableRng};
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
-use crate::models::{Algorithm, Assignment, Server, SimulationResult};
+use crate::models::{Algorithm, Assignment, Server, ServerSummary, SimulationResult, TieBreak};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct InFlight {
@@ -29,10 +29,13 @@ pub fn run_simulation(
     mut servers: Vec<Server>,
     algo: Algorithm,
     request_count: usize,
-    seed: Option<u64>,
+    tie_break: TieBreak,
 ) -> SimulationResult {
     let mut assignments = Vec::with_capacity(request_count);
-    let mut rng = seed.map(StdRng::seed_from_u64);
+    let mut rng = match &tie_break {
+        TieBreak::Seeded(seed) => Some(StdRng::seed_from_u64(*seed)),
+        TieBreak::Stable => None,
+    };
     let mut next_idx = 0usize;
     let mut in_flight: BinaryHeap<Reverse<InFlight>> = BinaryHeap::new();
 
@@ -84,12 +87,16 @@ pub fn run_simulation(
     let totals = servers
         .iter()
         .zip(counts)
-        .map(|(server, count)| (server.name.clone(), count))
+        .map(|(server, count)| ServerSummary {
+            name: server.name.clone(),
+            requests: count,
+        })
         .collect();
 
     SimulationResult {
         assignments,
         totals,
+        tie_break,
     }
 }
 
@@ -202,7 +209,7 @@ mod tests {
             Server::test_at(0, "fast", 1, 0, 0),
             Server::test_at(1, "slow", 100, 0, 0),
         ];
-        let result = run_simulation(servers, Algorithm::LeastConnections, 2, None);
+        let result = run_simulation(servers, Algorithm::LeastConnections, 2, TieBreak::Stable);
         let assigned = result
             .assignments
             .iter()
@@ -222,5 +229,21 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(7);
         let actual = pick_index(&candidates, Some(&mut rng));
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn summary_preserves_input_order() {
+        let servers = vec![
+            Server::test_at(0, "api", 10, 0, 0),
+            Server::test_at(1, "db", 20, 0, 0),
+            Server::test_at(2, "cache", 30, 0, 0),
+        ];
+        let result = run_simulation(servers, Algorithm::RoundRobin, 2, TieBreak::Stable);
+        let names: Vec<&str> = result
+            .totals
+            .iter()
+            .map(|summary| summary.name.as_str())
+            .collect();
+        assert_eq!(names, vec!["api", "db", "cache"]);
     }
 }
