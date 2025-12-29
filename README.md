@@ -25,6 +25,12 @@ cargo run -- --algo round-robin --servers a:10,b:20 --requests 5
 
 Full output includes a single `Tie-break:` line (`stable` or `seeded(<seed>)`) before per-request assignments.
 
+## Least-Connections Semantics
+
+- Least-connections uses `active_connections`, not historical picks.
+- Requests arrive one time unit apart; a request stays in flight for `base_latency_ms`.
+- A server's active connections drop when in-flight requests complete (time-based decay).
+
 ## Project Layout
 
 - `src/main.rs` wires CLI parsing to the simulation.
@@ -40,5 +46,3 @@ cargo nextest run
 cargo fmt
 cargo clippy
 ```
-
-Note: `cargo clippy` may report dead code in `src/models.rs`; we keep some types there for planned algorithms and will implement them later.
