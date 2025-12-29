@@ -3,8 +3,9 @@ use rand::{Rng, SeedableRng};
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 
+use crate::error::{Error, Result};
 use crate::models::{
-    Algorithm, Assignment, Server, ServerSummary, SimError, SimResult, SimulationResult, TieBreak,
+    Algorithm, Assignment, RunMetadata, Server, ServerSummary, SimulationResult, TieBreak,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -27,19 +28,19 @@ impl PartialOrd for InFlight {
     }
 }
 
-pub(crate) fn run_simulation(
+pub fn run_simulation(
     mut servers: Vec<Server>,
     algo: Algorithm,
     request_count: usize,
     tie_break: TieBreak,
-) -> SimResult<SimulationResult> {
+) -> Result<SimulationResult> {
     if servers.is_empty() {
-        return Err(SimError::EmptyServers);
+        return Err(Error::EmptyServers);
     }
     let mut id_to_index = HashMap::new();
     for (idx, server) in servers.iter().enumerate() {
         if id_to_index.insert(server.id, idx).is_some() {
-            return Err(SimError::DuplicateServerId(server.id));
+            return Err(Error::DuplicateServerId(server.id));
         }
     }
     let mut assignments = Vec::with_capacity(request_count);
@@ -121,10 +122,20 @@ pub(crate) fn run_simulation(
         })
         .collect();
 
+    let duration_ms = assignments
+        .iter()
+        .map(|assignment| assignment.completed_at)
+        .max()
+        .unwrap_or(0);
+
     Ok(SimulationResult {
         assignments,
         totals,
-        tie_break,
+        metadata: RunMetadata {
+            algo: algo.to_string(),
+            tie_break: tie_break.to_string(),
+            duration_ms,
+        },
     })
 }
 

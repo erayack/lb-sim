@@ -1,7 +1,8 @@
 use clap::{Parser, ValueEnum};
 use std::collections::HashSet;
 
-use crate::models::{Algorithm, Server, SimError, SimResult};
+use crate::error::{Error, Result};
+use crate::models::{Algorithm, Server};
 
 #[derive(Parser, Debug)]
 #[command(name = "load-balancer-cli")]
@@ -12,7 +13,9 @@ pub struct Args {
     pub servers: String,
     #[arg(long)]
     pub requests: usize,
-    #[arg(long)]
+    #[arg(long, value_enum, default_value = "human")]
+    pub format: FormatArg,
+    #[arg(long, hide = true)]
     pub summary: bool,
     #[arg(
         long,
@@ -29,6 +32,13 @@ pub enum AlgoArg {
     LeastResponseTime,
 }
 
+#[derive(ValueEnum, Clone, Debug, PartialEq, Eq)]
+pub enum FormatArg {
+    Human,
+    Summary,
+    Json,
+}
+
 impl From<AlgoArg> for Algorithm {
     fn from(value: AlgoArg) -> Self {
         match value {
@@ -40,22 +50,22 @@ impl From<AlgoArg> for Algorithm {
     }
 }
 
-pub fn parse_args() -> SimResult<Args> {
-    Args::try_parse().map_err(|e| SimError::Cli(e.to_string()))
+pub fn parse_args() -> Result<Args> {
+    Args::try_parse().map_err(|e| Error::Cli(e.to_string()))
 }
 
-pub fn parse_servers(input: &str) -> SimResult<Vec<Server>> {
+pub fn parse_servers(input: &str) -> Result<Vec<Server>> {
     let mut servers = Vec::new();
     let mut names = HashSet::new();
 
     if input.trim().is_empty() {
-        return Err(SimError::EmptyServers);
+        return Err(Error::EmptyServers);
     }
 
     for (id, entry) in input.split(',').enumerate() {
         let trimmed = entry.trim();
         if trimmed.is_empty() {
-            return Err(SimError::EmptyServerEntry);
+            return Err(Error::EmptyServerEntry);
         }
 
         let mut parts = trimmed.split(':');
@@ -63,32 +73,32 @@ pub fn parse_servers(input: &str) -> SimResult<Vec<Server>> {
         let latency_str = parts.next().unwrap_or("").trim();
         let weight_str = parts.next().map(str::trim);
         if parts.next().is_some() {
-            return Err(SimError::InvalidServerEntry(trimmed.to_string()));
+            return Err(Error::InvalidServerEntry(trimmed.to_string()));
         }
         if name.is_empty() || latency_str.is_empty() || weight_str == Some("") {
-            return Err(SimError::InvalidServerEntry(trimmed.to_string()));
+            return Err(Error::InvalidServerEntry(trimmed.to_string()));
         }
 
         if names.contains(name) {
-            return Err(SimError::DuplicateServerName(name.to_string()));
+            return Err(Error::DuplicateServerName(name.to_string()));
         }
         names.insert(name.to_string());
 
         let latency_ms: u64 = latency_str
             .parse()
-            .map_err(|_| SimError::InvalidLatency(trimmed.to_string()))?;
+            .map_err(|_| Error::InvalidLatency(trimmed.to_string()))?;
         if latency_ms == 0 {
-            return Err(SimError::InvalidLatencyValue(trimmed.to_string()));
+            return Err(Error::InvalidLatencyValue(trimmed.to_string()));
         }
 
         let weight = match weight_str {
             Some(value) => value
                 .parse::<u32>()
-                .map_err(|_| SimError::InvalidWeight(trimmed.to_string()))?,
+                .map_err(|_| Error::InvalidWeight(trimmed.to_string()))?,
             None => 1,
         };
         if weight == 0 {
-            return Err(SimError::InvalidWeightValue(trimmed.to_string()));
+            return Err(Error::InvalidWeightValue(trimmed.to_string()));
         }
 
         servers.push(Server {
