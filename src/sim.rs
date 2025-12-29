@@ -27,7 +27,7 @@ impl PartialOrd for InFlight {
     }
 }
 
-pub(crate) fn run_simulation(
+pub fn run_simulation(
     mut servers: Vec<Server>,
     algo: Algorithm,
     request_count: usize,

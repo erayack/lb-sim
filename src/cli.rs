@@ -1,19 +1,42 @@
-use clap::{Parser, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::collections::HashSet;
 
-use crate::models::{Algorithm, Server, SimError, SimResult};
+use crate::models::{AlgoConfig, Algorithm, Server, SimConfig, SimError, SimResult, TieBreak};
 
 #[derive(Parser, Debug)]
-#[command(name = "load-balancer-cli")]
-pub struct Args {
+#[command(
+    name = "load-balancer-cli",
+    subcommand_required = true,
+    arg_required_else_help = true
+)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Command,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    Run(RunArgs),
+    ListAlgorithms,
+    ShowConfig(SimArgs),
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct RunArgs {
+    #[command(flatten)]
+    pub sim: SimArgs,
+    #[arg(long)]
+    pub summary: bool,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct SimArgs {
     #[arg(long, value_enum)]
     pub algo: AlgoArg,
     #[arg(long)]
     pub servers: String,
     #[arg(long)]
     pub requests: usize,
-    #[arg(long)]
-    pub summary: bool,
     #[arg(
         long,
         help = "Seed tie-breaks for least-connections/response-time; omit for stable input-order tie-breaks"
@@ -40,8 +63,30 @@ impl From<AlgoArg> for Algorithm {
     }
 }
 
-pub fn parse_args() -> SimResult<Args> {
-    Args::try_parse().map_err(|e| SimError::Cli(e.to_string()))
+pub fn parse_cli() -> SimResult<Cli> {
+    Cli::try_parse().map_err(|e| SimError::Cli(e.to_string()))
+}
+
+pub fn build_configs(args: &SimArgs) -> SimResult<(SimConfig, AlgoConfig)> {
+    let servers = parse_servers(&args.servers)?;
+    if args.requests == 0 {
+        return Err(SimError::RequestsZero);
+    }
+
+    let algo: Algorithm = args.algo.clone().into();
+    let tie_break = match args.seed {
+        Some(seed) => TieBreak::Seeded(seed),
+        None => TieBreak::Stable,
+    };
+
+    Ok((
+        SimConfig {
+            servers,
+            requests: args.requests,
+            tie_break,
+        },
+        AlgoConfig { algorithm: algo },
+    ))
 }
 
 pub fn parse_servers(input: &str) -> SimResult<Vec<Server>> {

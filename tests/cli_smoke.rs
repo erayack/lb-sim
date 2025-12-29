@@ -7,6 +7,7 @@ fn summary_round_robin_is_stable() {
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("load-balancer-cli");
     cmd.args([
+        "run",
         "--algo",
         "round-robin",
         "--servers",
@@ -27,6 +28,7 @@ fn summary_least_response_time_is_stable() {
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("load-balancer-cli");
     cmd.args([
+        "run",
         "--algo",
         "least-response-time",
         "--servers",
@@ -46,6 +48,7 @@ fn summary_preserves_input_order() {
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("load-balancer-cli");
     cmd.args([
+        "run",
         "--algo",
         "round-robin",
         "--servers",
@@ -63,6 +66,7 @@ fn summary_preserves_input_order_for_least_connections() {
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("load-balancer-cli");
     cmd.args([
+        "run",
         "--algo",
         "least-connections",
         "--servers",
@@ -90,6 +94,7 @@ fn full_output_least_response_time_includes_scores() {
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("load-balancer-cli");
     cmd.args([
+        "run",
         "--algo",
         "least-response-time",
         "--servers",
@@ -116,6 +121,7 @@ fn full_output_round_robin_omits_scores() {
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("load-balancer-cli");
     cmd.args([
+        "run",
         "--algo",
         "round-robin",
         "--servers",

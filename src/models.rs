@@ -84,6 +84,29 @@ pub enum Algorithm {
     LeastResponseTime,
 }
 
+impl fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Algorithm::RoundRobin => write!(f, "round-robin"),
+            Algorithm::WeightedRoundRobin => write!(f, "weighted-round-robin"),
+            Algorithm::LeastConnections => write!(f, "least-connections"),
+            Algorithm::LeastResponseTime => write!(f, "least-response-time"),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct AlgoConfig {
+    pub algorithm: Algorithm,
+}
+
+#[derive(Clone, Debug)]
+pub struct SimConfig {
+    pub servers: Vec<Server>,
+    pub requests: usize,
+    pub tie_break: TieBreak,
+}
+
 #[derive(Clone, Debug)]
 pub enum TieBreak {
     Stable,
