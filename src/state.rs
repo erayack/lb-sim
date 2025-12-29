@@ -18,12 +18,6 @@ pub struct EngineState {
     pub assignments: Vec<Assignment>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Request {
-    pub id: usize,
-    pub arrival_ms: u64,
-}
-
 #[derive(Clone, Debug, Serialize)]
 pub struct Assignment {
     pub request_id: usize,

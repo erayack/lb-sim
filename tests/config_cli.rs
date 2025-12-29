@@ -68,3 +68,33 @@ fn repeatable_server_flag_parses() {
     ]);
     cmd.assert().success().stdout(diff(expected));
 }
+
+#[test]
+fn empty_servers_csv_with_server_entries_succeeds() {
+    let expected = concat!(
+        "Metadata:\n",
+        "algo: round-robin\n",
+        "tie_break: stable\n",
+        "duration_ms: 21\n",
+        "Summary:\n",
+        "web: 1 requests (avg response: 10ms)\n",
+        "cache: 1 requests (avg response: 20ms)\n",
+    );
+
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("load-balancer-cli");
+    cmd.args([
+        "run",
+        "--algo",
+        "round-robin",
+        "--servers",
+        "",
+        "--server",
+        "web:10",
+        "--server",
+        "cache:20",
+        "--requests",
+        "2",
+        "--summary",
+    ]);
+    cmd.assert().success().stdout(diff(expected));
+}

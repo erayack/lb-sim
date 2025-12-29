@@ -14,7 +14,7 @@ pub use round_robin::RoundRobinStrategy;
 pub use weighted_round_robin::WeightedRoundRobinStrategy;
 
 pub trait SelectionStrategy {
-    fn select(&mut self, ctx: &SelectionContext) -> Selection;
+    fn select(&mut self, ctx: &mut SelectionContext) -> Selection;
 }
 
 pub struct SelectionContext<'a> {

@@ -186,15 +186,15 @@ pub fn parse_server_args(
     let mut entries: Vec<String> = Vec::new();
 
     if let Some(csv) = servers_csv {
-        if csv.trim().is_empty() {
-            return Err(Error::EmptyServers);
-        }
-        for entry in csv.split(',') {
-            let trimmed = entry.trim();
-            if trimmed.is_empty() {
-                return Err(Error::EmptyServerEntry);
+        let trimmed = csv.trim();
+        if !trimmed.is_empty() {
+            for entry in trimmed.split(',') {
+                let trimmed_entry = entry.trim();
+                if trimmed_entry.is_empty() {
+                    return Err(Error::EmptyServerEntry);
+                }
+                entries.push(trimmed_entry.to_string());
             }
-            entries.push(trimmed.to_string());
         }
     }
 

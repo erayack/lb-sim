@@ -69,12 +69,12 @@ impl SimulationEngine {
                         TieBreakConfig::Stable => &mut stable_rng,
                         TieBreakConfig::Seeded => &mut self.rng,
                     };
-                    let ctx = SelectionContext {
+                    let mut ctx = SelectionContext {
                         servers: &self.state.servers,
                         time_ms: self.state.time_ms,
                         rng,
                     };
-                    let selection = self.strategy.select(&ctx);
+                    let selection = self.strategy.select(&mut ctx);
                     let server_idx = selection.server_id;
 
                     let server = &mut self.state.servers[server_idx];

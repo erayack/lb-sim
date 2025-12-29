@@ -6,7 +6,7 @@ use crate::algorithms::{Selection, SelectionContext, SelectionStrategy};
 pub struct LeastResponseTimeStrategy;
 
 impl SelectionStrategy for LeastResponseTimeStrategy {
-    fn select(&mut self, ctx: &SelectionContext) -> Selection {
+    fn select(&mut self, ctx: &mut SelectionContext) -> Selection {
         let mut min_score = u64::MAX;
         let mut candidates = Vec::new();
 
@@ -24,10 +24,7 @@ impl SelectionStrategy for LeastResponseTimeStrategy {
         let choice = if candidates.len() == 1 {
             candidates[0]
         } else {
-            #[allow(invalid_reference_casting)]
-            let rng =
-                unsafe { &mut *(ctx.rng as *const dyn rand::RngCore as *mut dyn rand::RngCore) };
-            let pick = rng.gen_range(0..candidates.len());
+            let pick = ctx.rng.gen_range(0..candidates.len());
             candidates[pick]
         };
 
@@ -77,13 +74,13 @@ mod tests {
         ];
         let mut rng = rand::rngs::StdRng::seed_from_u64(1);
         let mut strategy = LeastResponseTimeStrategy;
-        let ctx = SelectionContext {
+        let mut ctx = SelectionContext {
             servers: &servers,
             time_ms: 0,
             rng: &mut rng,
         };
 
-        let selection = strategy.select(&ctx);
+        let selection = strategy.select(&mut ctx);
         assert_eq!(selection.server_id, 2);
         assert_eq!(selection.score, Some(20));
     }
@@ -128,13 +125,13 @@ mod tests {
 
         let mut rng = rand::rngs::StdRng::seed_from_u64(99);
         let mut strategy = LeastResponseTimeStrategy;
-        let ctx = SelectionContext {
+        let mut ctx = SelectionContext {
             servers: &servers,
             time_ms: 0,
             rng: &mut rng,
         };
 
-        let selection = strategy.select(&ctx);
+        let selection = strategy.select(&mut ctx);
         assert_eq!(selection.server_id, expected);
         assert_eq!(selection.score, Some(10));
     }

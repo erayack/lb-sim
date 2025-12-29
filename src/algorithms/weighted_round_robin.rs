@@ -6,7 +6,7 @@ pub struct WeightedRoundRobinStrategy {
 }
 
 impl SelectionStrategy for WeightedRoundRobinStrategy {
-    fn select(&mut self, ctx: &SelectionContext) -> Selection {
+    fn select(&mut self, ctx: &mut SelectionContext) -> Selection {
         let total_weight: u64 = ctx.servers.iter().map(|server| server.weight as u64).sum();
         let target = self.cursor % total_weight;
         self.cursor = (self.cursor + 1) % total_weight;
@@ -58,13 +58,13 @@ mod tests {
         ];
         let mut rng = rand::rngs::StdRng::seed_from_u64(1);
         let mut strategy = WeightedRoundRobinStrategy::default();
-        let ctx = SelectionContext {
+        let mut ctx = SelectionContext {
             servers: &servers,
             time_ms: 0,
             rng: &mut rng,
         };
 
-        let picks: Vec<usize> = (0..6).map(|_| strategy.select(&ctx).server_id).collect();
+        let picks: Vec<usize> = (0..6).map(|_| strategy.select(&mut ctx).server_id).collect();
         assert_eq!(picks, vec![0, 0, 1, 0, 0, 1]);
     }
 }

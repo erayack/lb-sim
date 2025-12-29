@@ -6,7 +6,7 @@ pub struct RoundRobinStrategy {
 }
 
 impl SelectionStrategy for RoundRobinStrategy {
-    fn select(&mut self, ctx: &SelectionContext) -> Selection {
+    fn select(&mut self, ctx: &mut SelectionContext) -> Selection {
         let idx = self.next_idx % ctx.servers.len();
         self.next_idx = (self.next_idx + 1) % ctx.servers.len();
         Selection {
@@ -55,15 +55,15 @@ mod tests {
         ];
         let mut rng = rand::rngs::StdRng::seed_from_u64(1);
         let mut strategy = RoundRobinStrategy::default();
-        let ctx = SelectionContext {
+        let mut ctx = SelectionContext {
             servers: &servers,
             time_ms: 0,
             rng: &mut rng,
         };
 
-        assert_eq!(strategy.select(&ctx).server_id, 0);
-        assert_eq!(strategy.select(&ctx).server_id, 1);
-        assert_eq!(strategy.select(&ctx).server_id, 2);
-        assert_eq!(strategy.select(&ctx).server_id, 0);
+        assert_eq!(strategy.select(&mut ctx).server_id, 0);
+        assert_eq!(strategy.select(&mut ctx).server_id, 1);
+        assert_eq!(strategy.select(&mut ctx).server_id, 2);
+        assert_eq!(strategy.select(&mut ctx).server_id, 0);
     }
 }
