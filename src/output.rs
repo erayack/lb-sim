@@ -1,4 +1,5 @@
-use crate::state::{Assignment, ServerSummary, SimulationResult};
+use crate::state::{Assignment, RunMetadata, ServerSummary, SimulationResult};
+use serde::Serialize;
 
 pub trait Formatter {
     fn write(&self, result: &SimulationResult) -> String;
@@ -12,7 +13,7 @@ impl Formatter for HumanFormatter {
         write_metadata(&mut output, result);
         output.push_str("Assignments:\n");
         for assignment in &result.assignments {
-            write_assignment(&mut output, assignment);
+            write_assignment_with_totals(&mut output, assignment, &result.totals);
         }
         write_summary(&mut output, &result.totals);
         output
@@ -34,7 +35,24 @@ pub struct JsonFormatter;
 
 impl Formatter for JsonFormatter {
     fn write(&self, result: &SimulationResult) -> String {
-        serde_json::to_string_pretty(result).unwrap()
+        let assignments = result
+            .assignments
+            .iter()
+            .map(|assignment| JsonAssignment {
+                request_id: assignment.request_id,
+                server_id: assignment.server_id,
+                server_name: server_name_for(assignment, &result.totals),
+                started_at: assignment.started_at,
+                completed_at: assignment.completed_at,
+                score: assignment.score,
+            })
+            .collect::<Vec<_>>();
+        let json = JsonSimulationResult {
+            assignments,
+            totals: &result.totals,
+            metadata: &result.metadata,
+        };
+        serde_json::to_string_pretty(&json).unwrap()
     }
 }
 
@@ -43,20 +61,6 @@ fn write_metadata(output: &mut String, result: &SimulationResult) {
     output.push_str(&format!("algo: {}\n", result.metadata.algo));
     output.push_str(&format!("tie_break: {}\n", result.metadata.tie_break));
     output.push_str(&format!("duration_ms: {}\n", result.metadata.duration_ms));
-}
-
-fn write_assignment(output: &mut String, assignment: &Assignment) {
-    if let Some(score) = assignment.score {
-        output.push_str(&format!(
-            "Request {} -> {} (score: {}ms)\n",
-            assignment.request_id, assignment.server_name, score
-        ));
-    } else {
-        output.push_str(&format!(
-            "Request {} -> {}\n",
-            assignment.request_id, assignment.server_name
-        ));
-    }
 }
 
 fn write_summary(output: &mut String, totals: &[ServerSummary]) {
@@ -69,6 +73,49 @@ fn write_summary(output: &mut String, totals: &[ServerSummary]) {
     }
 }
 
+fn write_assignment_with_totals(
+    output: &mut String,
+    assignment: &Assignment,
+    totals: &[ServerSummary],
+) {
+    let server_name = server_name_for(assignment, totals);
+    if let Some(score) = assignment.score {
+        output.push_str(&format!(
+            "Request {} -> {} (score: {}ms)\n",
+            assignment.request_id, server_name, score
+        ));
+    } else {
+        output.push_str(&format!(
+            "Request {} -> {}\n",
+            assignment.request_id, server_name
+        ));
+    }
+}
+
+fn server_name_for<'a>(assignment: &Assignment, totals: &'a [ServerSummary]) -> &'a str {
+    totals
+        .get(assignment.server_id)
+        .map(|summary| summary.name.as_str())
+        .unwrap_or("unknown")
+}
+
+#[derive(Serialize)]
+struct JsonAssignment<'a> {
+    request_id: usize,
+    server_id: usize,
+    server_name: &'a str,
+    started_at: u64,
+    completed_at: u64,
+    score: Option<u64>,
+}
+
+#[derive(Serialize)]
+struct JsonSimulationResult<'a> {
+    assignments: Vec<JsonAssignment<'a>>,
+    totals: &'a [ServerSummary],
+    metadata: &'a RunMetadata,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,7 +126,6 @@ mod tests {
             assignments: vec![Assignment {
                 request_id: 1,
                 server_id: 0,
-                server_name: "api".to_string(),
                 score: Some(10),
                 started_at: 0,
                 completed_at: 10,

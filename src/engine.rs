@@ -39,12 +39,20 @@ impl SimulationEngine {
         }
     }
 
-    pub fn run(&mut self) -> Result<SimulationResult> {
+    pub fn run(&mut self, store_assignments: bool) -> Result<SimulationResult> {
         validate_config(&self.config)?;
         let requests = build_requests(&self.config.requests, self.config.seed)?;
 
         self.state.servers = init_server_state(&self.config.servers);
-        self.state.assignments = Vec::with_capacity(requests.len());
+        if store_assignments {
+            self.state.assignments = Vec::with_capacity(requests.len());
+        } else {
+            self.state.assignments = Vec::new();
+        }
+
+        let mut counts = vec![0u32; self.state.servers.len()];
+        let mut total_response_ms = vec![0u64; self.state.servers.len()];
+        let mut duration_ms = 0;
 
         let mut events: BinaryHeap<Reverse<ScheduledEvent>> = BinaryHeap::new();
         for request in requests {
@@ -84,6 +92,10 @@ impl SimulationEngine {
 
                     let started_at = self.state.time_ms;
                     let completed_at = started_at + server.base_latency_ms;
+                    let response_time = completed_at - started_at;
+                    counts[server_idx] += 1;
+                    total_response_ms[server_idx] += response_time;
+                    duration_ms = duration_ms.max(completed_at);
                     events.push(Reverse(ScheduledEvent::new(
                         completed_at,
                         Event::RequestComplete {
@@ -92,24 +104,17 @@ impl SimulationEngine {
                         },
                     )));
 
-                    self.state.assignments.push(Assignment {
-                        request_id: request.id,
-                        server_id: server_idx,
-                        server_name: server.name.clone(),
-                        started_at,
-                        completed_at,
-                        score: selection.score,
-                    });
+                    if store_assignments {
+                        self.state.assignments.push(Assignment {
+                            request_id: request.id,
+                            server_id: server_idx,
+                            started_at,
+                            completed_at,
+                            score: selection.score,
+                        });
+                    }
                 }
             }
-        }
-
-        let mut counts = vec![0u32; self.state.servers.len()];
-        let mut total_response_ms = vec![0u64; self.state.servers.len()];
-        for assignment in &self.state.assignments {
-            let idx = assignment.server_id;
-            counts[idx] += 1;
-            total_response_ms[idx] += assignment.completed_at - assignment.started_at;
         }
 
         let totals = self
@@ -132,16 +137,12 @@ impl SimulationEngine {
             })
             .collect();
 
-        let duration_ms = self
-            .state
-            .assignments
-            .iter()
-            .map(|assignment| assignment.completed_at)
-            .max()
-            .unwrap_or(0);
-
         Ok(SimulationResult {
-            assignments: self.state.assignments.clone(),
+            assignments: if store_assignments {
+                std::mem::take(&mut self.state.assignments)
+            } else {
+                Vec::new()
+            },
             totals,
             metadata: RunMetadata {
                 algo: self.config.algo.to_string(),
@@ -153,9 +154,20 @@ impl SimulationEngine {
 }
 
 pub fn run_simulation(config: &SimConfig) -> Result<SimulationResult> {
+    run_simulation_with_options(config, true)
+}
+
+pub fn run_simulation_summary(config: &SimConfig) -> Result<SimulationResult> {
+    run_simulation_with_options(config, false)
+}
+
+pub fn run_simulation_with_options(
+    config: &SimConfig,
+    store_assignments: bool,
+) -> Result<SimulationResult> {
     let strategy = build_strategy(config.algo.clone());
     let mut engine = SimulationEngine::new(config.clone(), strategy);
-    engine.run()
+    engine.run(store_assignments)
 }
 
 fn validate_config(config: &SimConfig) -> Result<()> {

@@ -22,7 +22,6 @@ pub struct EngineState {
 pub struct Assignment {
     pub request_id: usize,
     pub server_id: usize,
-    pub server_name: String,
     pub started_at: u64,
     pub completed_at: u64,
     pub score: Option<u64>,

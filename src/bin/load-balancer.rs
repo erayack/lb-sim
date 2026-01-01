@@ -22,7 +22,10 @@ fn run() -> Result<()> {
 
 fn run_simulation(run_args: RunArgs) -> Result<()> {
     let (config, format) = config::build_config_from_run_args(run_args)?;
-    let result = engine::run_simulation(&config)?;
+    let result = match format {
+        FormatArg::Summary => engine::run_simulation_summary(&config)?,
+        _ => engine::run_simulation(&config)?,
+    };
 
     let formatter = formatter_for(&format);
     let output = formatter.write(&result);
