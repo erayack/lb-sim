@@ -39,6 +39,26 @@ build:
 build-release:
     cargo build --release
 
+# Run all Criterion benchmarks
+bench:
+    cargo bench
+
+# Run engine benchmarks only
+bench-engine:
+    cargo bench --bench engine_bench
+
+# Run selection benchmarks only
+bench-selection:
+    cargo bench --bench selection_bench
+
+# Run flamegraph on engine benchmark (requires cargo-flamegraph)
+flamegraph FILTER="":
+    cargo flamegraph --bench engine_bench -- {{FILTER}}
+
+# Run Instruments Time Profiler on a bench binary
+instruments BENCH="engine_bench" FILTER="":
+    bash -c 'cargo bench --bench {{BENCH}} --no-run && bin=$(ls target/release/deps/{{BENCH}}-* | head -n 1) && if [ -n "{{FILTER}}" ]; then xcrun xctrace record --template "Time Profiler" --launch -- "$bin" -- {{FILTER}}; else xcrun xctrace record --template "Time Profiler" --launch -- "$bin"; fi'
+
 # Run the CLI with example arguments
 run-example:
     cargo run -- --algo round-robin --servers a:10,b:20 --requests 5
@@ -50,4 +70,3 @@ clean:
 # Show available recipes
 help:
     @just --list
-

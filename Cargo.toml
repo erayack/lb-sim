@@ -18,7 +18,19 @@ toml = "0.8"
 [dev-dependencies]
 assert_cmd = "2"
 predicates = "3"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [profile.test]
 opt-level = 0
 debug = true
+
+[profile.bench]
+debug = true
+
+[[bench]]
+name = "engine_bench"
+harness = false
+
+[[bench]]
+name = "selection_bench"
+harness = false
