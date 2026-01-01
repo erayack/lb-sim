@@ -1,10 +1,10 @@
 [package]
-name = "load-balancer-cli"
+name = "lb-sim"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "load-balancer-cli"
+name = "lb-sim"
 path = "src/bin/load-balancer.rs"
 
 [dependencies]
