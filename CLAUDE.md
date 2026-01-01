@@ -12,6 +12,7 @@ cargo run -- show-config --algo round-robin --servers a:10,b:20       # Show con
 cargo test                 # Run all tests
 cargo nextest run          # Run all tests (preferred over cargo test)
 cargo nextest run <test>   # Run a specific test
+cargo bench                # Run benchmarks
 cargo fmt                  # Format code
 cargo clippy               # Run linter
 just                       # Show available just recipes
@@ -80,3 +81,35 @@ The simulation engine uses a priority queue of scheduled events:
 - `run` - Execute a simulation
 - `list-algorithms` - Print all available algorithm names (one per line)
 - `show-config` - Display effective configuration from args/config file
+
+## Benchmarks
+
+This project uses Criterion benchmarks to measure engine and selection algorithm performance (default: 1,000 requests, 8 servers).
+
+### Run Benchmarks
+
+```bash
+cargo bench                     # Run all benchmarks
+cargo bench --bench engine_bench      # Full simulation benchmarks
+cargo bench --bench selection_bench   # Selection hot loop benchmarks
+cargo bench --bench engine_bench -- engine/round-robin  # Filter by algorithm
+```
+
+Criterion reports are written to `target/criterion/`.
+
+### Profiling
+
+**Flamegraph** (requires `cargo-flamegraph`):
+
+```bash
+cargo flamegraph --bench engine_bench
+cargo flamegraph --bench engine_bench -- engine/round-robin
+```
+
+**macOS Instruments** (Time Profiler):
+
+```bash
+cargo bench --bench engine_bench --no-run
+ls target/release/deps/engine_bench-*
+xcrun xctrace record --template "Time Profiler" --launch -- <bench-bin> -- engine/round-robin
+```

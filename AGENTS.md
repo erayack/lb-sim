@@ -32,6 +32,15 @@
 
 - `cargo nextest run` is the preferred test runner (config in `.config/nextest.toml`).
 - `cargo xtest` is a local alias for `cargo nextest run`.
+- Benchmarks live under `benches/` and use Criterion; see `docs/benchmark.md` for the full workflow.
+
+## Benchmarks & Profiling
+
+- Run all benchmarks with `cargo bench`, or target a bench with `cargo bench --bench engine_bench` / `cargo bench --bench selection_bench`.
+- Filter Criterion benchmarks by ID using `cargo bench --bench engine_bench -- engine/round-robin` (substring match).
+- Criterion reports are written under `target/criterion/`.
+- Flamegraphs use `cargo flamegraph` (from `cargo-flamegraph`), e.g. `cargo flamegraph --bench engine_bench`.
+- macOS Time Profiler workflow: `cargo bench --bench engine_bench --no-run`, locate `target/release/deps/engine_bench-*`, then run `xcrun xctrace record --template "Time Profiler" --launch -- <bench-bin> -- engine/round-robin`.
 
 ## Coding Style & Naming Conventions
 
