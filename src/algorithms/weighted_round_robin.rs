@@ -1,25 +1,48 @@
 use crate::algorithms::{Selection, SelectionContext, SelectionStrategy};
+use crate::state::ServerState;
 
 #[derive(Default)]
 pub struct WeightedRoundRobinStrategy {
     cursor: u64,
+    total_weight: u64,
+    prefix_sums: Vec<u64>,
+    cached_len: usize,
+}
+
+impl WeightedRoundRobinStrategy {
+    fn rebuild_cache(&mut self, servers: &[ServerState]) {
+        self.total_weight = 0;
+        self.prefix_sums.clear();
+        self.prefix_sums.reserve(servers.len());
+
+        for server in servers {
+            self.total_weight += server.weight as u64;
+            self.prefix_sums.push(self.total_weight);
+        }
+
+        self.cached_len = servers.len();
+    }
 }
 
 impl SelectionStrategy for WeightedRoundRobinStrategy {
     fn select(&mut self, ctx: &mut SelectionContext) -> Selection {
-        let total_weight: u64 = ctx.servers.iter().map(|server| server.weight as u64).sum();
-        let target = self.cursor % total_weight;
-        self.cursor = (self.cursor + 1) % total_weight;
-
-        let mut cursor = 0u64;
-        let mut selected = 0usize;
-        for (idx, server) in ctx.servers.iter().enumerate() {
-            cursor += server.weight as u64;
-            if target < cursor {
-                selected = idx;
-                break;
-            }
+        if self.prefix_sums.is_empty() || self.cached_len != ctx.servers.len() {
+            self.rebuild_cache(ctx.servers);
         }
+
+        let target = self.cursor % self.total_weight;
+        self.cursor = (self.cursor + 1) % self.total_weight;
+
+        let selected = self
+            .prefix_sums
+            .binary_search_by(|sum| {
+                if *sum > target {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Less
+                }
+            })
+            .unwrap_or_else(|idx| idx);
 
         Selection {
             server_id: selected,
