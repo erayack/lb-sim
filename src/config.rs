@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use crate::error::{Error, Result};
 use crate::models::{AlgoConfig, RequestProfile, ServerConfig, SimConfig, TieBreakConfig};
 
+const SERVER_SPEC_VALUE_NAME: &str = "name:latency[:weight]";
+
 #[derive(Parser, Debug)]
 #[command(name = "lb-sim")]
 pub struct CliArgs {
@@ -15,7 +17,7 @@ pub struct CliArgs {
     pub algo: Option<AlgoArg>,
     #[arg(long)]
     pub servers: Option<String>,
-    #[arg(long, value_name = "name:latency[:weight]")]
+    #[arg(long, value_name = SERVER_SPEC_VALUE_NAME)]
     pub server: Vec<String>,
     #[arg(long)]
     pub requests: Option<usize>,
@@ -62,7 +64,7 @@ pub struct RunArgs {
     pub algo: Option<AlgoArg>,
     #[arg(long)]
     pub servers: Option<String>,
-    #[arg(long, value_name = "name:latency[:weight]")]
+    #[arg(long, value_name = SERVER_SPEC_VALUE_NAME)]
     pub server: Vec<String>,
     #[arg(long)]
     pub requests: Option<usize>,
@@ -416,4 +418,22 @@ fn capacity_rps(servers: &[ServerConfig]) -> f64 {
         .iter()
         .map(|server| (1000.0 / server.base_latency_ms as f64) * server.weight as f64)
         .sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_server_entry_handles_weight_and_default() {
+        let weighted = parse_server_entry("api:25:3").expect("weighted server should parse");
+        assert_eq!(weighted.name, "api");
+        assert_eq!(weighted.base_latency_ms, 25);
+        assert_eq!(weighted.weight, 3);
+
+        let defaulted = parse_server_entry("db:40").expect("default weight should parse");
+        assert_eq!(defaulted.name, "db");
+        assert_eq!(defaulted.base_latency_ms, 40);
+        assert_eq!(defaulted.weight, 1);
+    }
 }
