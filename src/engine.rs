@@ -57,25 +57,14 @@ impl SimulationEngine {
         let mut response_times = Vec::with_capacity(requests.len());
         let mut total_wait_ms = 0u64;
         let mut duration_ms = 0;
-        let mut first_arrival_ms: Option<u64> = None;
-
-        let mut events: BinaryHeap<Reverse<ScheduledEvent>> = BinaryHeap::new();
-        for request in requests {
-            first_arrival_ms = Some(match first_arrival_ms {
-                Some(current) => current.min(request.arrival_time_ms),
-                None => request.arrival_time_ms,
-            });
-            events.push(Reverse(ScheduledEvent::new(
-                request.arrival_time_ms,
-                Event::RequestArrival(request),
-            )));
-        }
+        let mut event_queue = schedule_requests(requests);
+        let first_arrival_ms = event_queue.peek().map(|Reverse(event)| event.time_ms);
 
         let mut stable_rng = StableRng;
 
-        while let Some(Reverse(scheduled)) = events.pop() {
-            self.state.time_ms = scheduled.time_ms;
-            match scheduled.event {
+        while let Some(Reverse(next_event)) = event_queue.pop() {
+            self.state.time_ms = next_event.time_ms;
+            match next_event.event {
                 Event::RequestComplete { server_id, .. } => {
                     let server = &mut self.state.servers[server_id];
                     server.active_connections -= 1;
@@ -111,7 +100,7 @@ impl SimulationEngine {
                     response_times.push(response_time);
                     total_wait_ms += wait_time;
                     duration_ms = duration_ms.max(completed_at);
-                    events.push(Reverse(ScheduledEvent::new(
+                    event_queue.push(Reverse(ScheduledEvent::new(
                         completed_at,
                         Event::RequestComplete {
                             server_id: server_idx,
@@ -226,6 +215,17 @@ impl SimulationEngine {
             },
         })
     }
+}
+
+fn schedule_requests(requests: Vec<Request>) -> BinaryHeap<Reverse<ScheduledEvent>> {
+    let mut event_queue = BinaryHeap::new();
+    for request in requests {
+        event_queue.push(Reverse(ScheduledEvent::new(
+            request.arrival_time_ms,
+            Event::RequestArrival(request),
+        )));
+    }
+    event_queue
 }
 
 pub fn run_simulation(config: &SimConfig) -> Result<SimulationResult> {
