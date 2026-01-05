@@ -122,25 +122,7 @@ impl SimulationEngine {
             }
         }
 
-        let totals = self
-            .state
-            .servers
-            .iter()
-            .enumerate()
-            .map(|(idx, server)| {
-                let count = counts[idx];
-                let avg_response_ms = if count == 0 {
-                    0
-                } else {
-                    total_response_ms[idx] / count as u64
-                };
-                ServerSummary {
-                    name: server.name.clone(),
-                    requests: count,
-                    avg_response_ms,
-                }
-            })
-            .collect();
+        let totals = build_server_summaries(&self.state.servers, &counts, &total_response_ms);
 
         response_times.sort_unstable();
         let p95_ms = nearest_rank_percentile(&response_times, 95.0);
@@ -226,6 +208,30 @@ fn schedule_requests(requests: Vec<Request>) -> BinaryHeap<Reverse<ScheduledEven
         )));
     }
     event_queue
+}
+
+fn build_server_summaries(
+    servers: &[ServerState],
+    counts: &[u32],
+    total_response_ms: &[u64],
+) -> Vec<ServerSummary> {
+    servers
+        .iter()
+        .enumerate()
+        .map(|(idx, server)| {
+            let count = counts[idx];
+            let avg_response_ms = if count == 0 {
+                0
+            } else {
+                total_response_ms[idx] / count as u64
+            };
+            ServerSummary {
+                name: server.name.clone(),
+                requests: count,
+                avg_response_ms,
+            }
+        })
+        .collect()
 }
 
 pub fn run_simulation(config: &SimConfig) -> Result<SimulationResult> {
