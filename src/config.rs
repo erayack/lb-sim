@@ -278,21 +278,15 @@ pub fn parse_server_args(
         let trimmed = csv.trim();
         if !trimmed.is_empty() {
             for entry in trimmed.split(',') {
-                let trimmed_entry = entry.trim();
-                if trimmed_entry.is_empty() {
-                    return Err(Error::EmptyServerEntry);
-                }
-                entries.push(trimmed_entry.to_string());
+                let normalized = normalized_server_entry(entry)?;
+                entries.push(normalized.to_string());
             }
         }
     }
 
     for entry in server_entries {
-        let trimmed = entry.trim();
-        if trimmed.is_empty() {
-            return Err(Error::EmptyServerEntry);
-        }
-        entries.push(trimmed.to_string());
+        let normalized = normalized_server_entry(entry)?;
+        entries.push(normalized.to_string());
     }
 
     if entries.is_empty() {
@@ -314,10 +308,7 @@ pub fn parse_server_args(
 }
 
 fn parse_server_spec(entry: &str) -> Result<ServerConfig> {
-    let trimmed = entry.trim();
-    if trimmed.is_empty() {
-        return Err(Error::EmptyServerEntry);
-    }
+    let trimmed = normalized_server_entry(entry)?;
 
     let mut parts = trimmed.split(':');
     let name = parts.next().unwrap_or("").trim();
@@ -352,6 +343,14 @@ fn parse_server_spec(entry: &str) -> Result<ServerConfig> {
         base_latency_ms: latency_ms,
         weight,
     })
+}
+
+fn normalized_server_entry(entry: &str) -> Result<&str> {
+    let trimmed = entry.trim();
+    if trimmed.is_empty() {
+        return Err(Error::EmptyServerEntry);
+    }
+    Ok(trimmed)
 }
 
 fn create_config(
