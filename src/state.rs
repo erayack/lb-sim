@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+pub type ServerId = usize;
+
 #[derive(Clone, Debug)]
 pub struct ServerState {
     pub id: usize,
@@ -22,7 +24,7 @@ pub struct EngineState {
 #[derive(Clone, Debug, Serialize)]
 pub struct Assignment {
     pub request_id: usize,
-    pub server_id: usize,
+    pub server_id: ServerId,
     pub arrival_time_ms: u64,
     pub started_at: u64,
     pub completed_at: u64,

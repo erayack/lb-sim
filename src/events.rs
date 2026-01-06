@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use crate::state::ServerId;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Request {
     pub id: usize,
@@ -9,7 +11,10 @@ pub struct Request {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Event {
     RequestArrival(Request),
-    RequestComplete { server_id: usize, request_id: usize },
+    RequestComplete {
+        server_id: ServerId,
+        request_id: usize,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
