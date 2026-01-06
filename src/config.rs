@@ -182,7 +182,7 @@ pub fn build_config_from_run_args(args: RunArgs) -> Result<(SimConfig, FormatArg
         let servers = parse_server_args(&args.server, args.servers.as_deref())?;
         let requests = if args.overload {
             RequestProfile::Poisson {
-                rate: capacity_rps(&servers) * args.overload_factor,
+                rate: overload_rate(&servers, args.overload_factor),
                 duration_ms: args.overload_duration_ms,
             }
         } else {
@@ -228,7 +228,7 @@ pub fn build_config_from_run_args(args: RunArgs) -> Result<(SimConfig, FormatArg
         };
     }
     if args.overload {
-        let rate = capacity_rps(&config.servers) * args.overload_factor;
+        let rate = overload_rate(&config.servers, args.overload_factor);
         config.requests = RequestProfile::Poisson {
             rate,
             duration_ms: args.overload_duration_ms,
@@ -417,6 +417,10 @@ fn capacity_rps(servers: &[ServerConfig]) -> f64 {
         .iter()
         .map(|server| (1000.0 / server.base_latency_ms as f64) * server.weight as f64)
         .sum()
+}
+
+fn overload_rate(servers: &[ServerConfig], overload_factor: f64) -> f64 {
+    capacity_rps(servers) * overload_factor
 }
 
 #[cfg(test)]
