@@ -1,8 +1,26 @@
+use crate::config::FormatArg;
 use crate::state::{Assignment, Phase1Metrics, RunMetadata, ServerSummary, SimulationResult};
 use serde::Serialize;
 
 pub trait Formatter {
     fn write(&self, result: &SimulationResult) -> String;
+}
+
+pub fn formatter_from_args(format: Option<FormatArg>, summary: bool) -> Box<dyn Formatter> {
+    let format = if summary {
+        FormatArg::Summary
+    } else {
+        format.unwrap_or(FormatArg::Human)
+    };
+    formatter_for(&format)
+}
+
+fn formatter_for(format: &FormatArg) -> Box<dyn Formatter> {
+    match format {
+        FormatArg::Human => Box::new(HumanFormatter),
+        FormatArg::Summary => Box::new(SummaryFormatter),
+        FormatArg::Json => Box::new(JsonFormatter),
+    }
 }
 
 pub struct HumanFormatter;

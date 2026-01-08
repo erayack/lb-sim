@@ -1,7 +1,7 @@
 use lb_sim::config::{self, format_config, Command, FormatArg, RunArgs};
 use lb_sim::engine;
 use lb_sim::error::Result;
-use lb_sim::output::{Formatter, HumanFormatter, JsonFormatter, SummaryFormatter};
+use lb_sim::output::formatter_from_args;
 
 fn main() {
     if let Err(err) = run() {
@@ -21,13 +21,15 @@ fn run() -> Result<()> {
 }
 
 fn run_simulation(run_args: RunArgs) -> Result<()> {
-    let (config, format) = config::build_config_from_run_args(run_args)?;
-    let result = match format {
+    let summary = run_args.summary;
+    let format = run_args.format.clone();
+    let (config, format_for_engine) = config::build_config_from_run_args(run_args)?;
+    let result = match format_for_engine {
         FormatArg::Summary => engine::run_simulation_summary(&config)?,
         _ => engine::run_simulation(&config)?,
     };
 
-    let formatter = formatter_for(&format);
+    let formatter = formatter_from_args(Some(format), summary);
     let output = formatter.write(&result);
     print!("{}", output);
 
@@ -47,12 +49,4 @@ fn show_config(run_args: RunArgs) -> Result<()> {
     let output = format_config(&config);
     print!("{}", output);
     Ok(())
-}
-
-fn formatter_for(format: &FormatArg) -> Box<dyn Formatter> {
-    match format {
-        FormatArg::Human => Box::new(HumanFormatter),
-        FormatArg::Summary => Box::new(SummaryFormatter),
-        FormatArg::Json => Box::new(JsonFormatter),
-    }
 }
