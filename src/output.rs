@@ -6,13 +6,8 @@ pub trait Formatter {
     fn write(&self, result: &SimulationResult) -> String;
 }
 
-pub fn formatter_from_args(format: Option<FormatArg>, summary: bool) -> Box<dyn Formatter> {
-    let format = if summary {
-        FormatArg::Summary
-    } else {
-        format.unwrap_or(FormatArg::Human)
-    };
-    formatter_for(&format)
+pub fn formatter_from_format(format: &FormatArg) -> Box<dyn Formatter> {
+    formatter_for(format)
 }
 
 fn formatter_for(format: &FormatArg) -> Box<dyn Formatter> {

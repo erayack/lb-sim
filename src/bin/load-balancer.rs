@@ -1,7 +1,7 @@
 use lb_sim::config::{self, format_config, Command, FormatArg, RunArgs};
 use lb_sim::engine;
 use lb_sim::error::Result;
-use lb_sim::output::formatter_from_args;
+use lb_sim::output::formatter_from_format;
 
 fn main() {
     if let Err(err) = run() {
@@ -21,15 +21,13 @@ fn run() -> Result<()> {
 }
 
 fn run_simulation(run_args: RunArgs) -> Result<()> {
-    let summary = run_args.summary;
-    let format = run_args.format.clone();
     let (config, format_for_engine) = config::build_config_from_run_args(run_args)?;
-    let result = match format_for_engine {
-        FormatArg::Summary => engine::run_simulation_summary(&config)?,
-        _ => engine::run_simulation(&config)?,
+    let result = if matches!(format_for_engine, FormatArg::Summary) {
+        engine::run_simulation_summary(&config)?
+    } else {
+        engine::run_simulation(&config)?
     };
-
-    let formatter = formatter_from_args(Some(format), summary);
+    let formatter = formatter_from_format(&format_for_engine);
     let output = formatter.write(&result);
     print!("{}", output);
 

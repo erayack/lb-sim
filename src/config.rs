@@ -151,7 +151,7 @@ pub fn parse_command() -> Result<Command> {
 }
 
 pub fn build_config_from_run_args(args: RunArgs) -> Result<(SimConfig, FormatArg)> {
-    let format = format_arg_from_run_args(&args);
+    let format = resolve_format_arg(&args);
     if args.requests.is_some() && args.burst.is_some() {
         return Err(Error::Cli(
             "use either --requests or --burst, not both".to_string(),
@@ -369,7 +369,7 @@ fn create_config(
     }
 }
 
-fn format_arg_from_run_args(args: &RunArgs) -> FormatArg {
+pub fn resolve_format_arg(args: &RunArgs) -> FormatArg {
     if args.summary {
         FormatArg::Summary
     } else {
