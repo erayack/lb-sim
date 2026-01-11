@@ -53,7 +53,7 @@ impl Formatter for JsonFormatter {
             .iter()
             .map(|assignment| JsonAssignment {
                 request_id: assignment.request_id,
-                server_id: assignment.server_id,
+                server_id: assignment.server_id.into(),
                 server_name: server_name_for(assignment, &result.totals),
                 arrival_time_ms: assignment.arrival_time_ms,
                 started_at: assignment.started_at,
@@ -108,8 +108,9 @@ fn write_assignment_with_totals(
 }
 
 fn server_name_for<'a>(assignment: &Assignment, totals: &'a [ServerSummary]) -> &'a str {
+    let server_idx: usize = assignment.server_id.into();
     totals
-        .get(assignment.server_id)
+        .get(server_idx)
         .map(|summary| summary.name.as_str())
         .unwrap_or("unknown")
 }
@@ -136,13 +137,13 @@ struct JsonSimulationResult<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{Assignment, RunMetadata, ServerSummary, SimulationResult};
+    use crate::state::{Assignment, RunMetadata, ServerId, ServerSummary, SimulationResult};
 
     fn sample_result() -> SimulationResult {
         SimulationResult {
             assignments: vec![Assignment {
                 request_id: 1,
-                server_id: 0,
+                server_id: ServerId::from(0),
                 arrival_time_ms: 0,
                 score: Some(10),
                 started_at: 0,

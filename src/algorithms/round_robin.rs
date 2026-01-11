@@ -1,4 +1,5 @@
 use crate::algorithms::{Selection, SelectionContext, SelectionStrategy};
+use crate::state::ServerId;
 
 #[derive(Default)]
 pub struct RoundRobinStrategy {
@@ -10,7 +11,7 @@ impl SelectionStrategy for RoundRobinStrategy {
         let idx = self.next_idx % ctx.servers.len();
         self.next_idx = (self.next_idx + 1) % ctx.servers.len();
         Selection {
-            server_id: idx,
+            server_id: ServerId::from(idx),
             score: None,
         }
     }
@@ -19,14 +20,14 @@ impl SelectionStrategy for RoundRobinStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::ServerState;
+    use crate::state::{ServerId, ServerState};
     use rand::SeedableRng;
 
     #[test]
     fn round_robin_cycles_indices() {
         let servers = vec![
             ServerState {
-                id: 0,
+                id: ServerId::from(0),
                 name: "a".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -36,7 +37,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 1,
+                id: ServerId::from(1),
                 name: "b".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -46,7 +47,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 2,
+                id: ServerId::from(2),
                 name: "c".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -64,9 +65,9 @@ mod tests {
             rng: &mut rng,
         };
 
-        assert_eq!(strategy.select(&mut ctx).server_id, 0);
-        assert_eq!(strategy.select(&mut ctx).server_id, 1);
-        assert_eq!(strategy.select(&mut ctx).server_id, 2);
-        assert_eq!(strategy.select(&mut ctx).server_id, 0);
+        assert_eq!(strategy.select(&mut ctx).server_id, ServerId::from(0));
+        assert_eq!(strategy.select(&mut ctx).server_id, ServerId::from(1));
+        assert_eq!(strategy.select(&mut ctx).server_id, ServerId::from(2));
+        assert_eq!(strategy.select(&mut ctx).server_id, ServerId::from(0));
     }
 }

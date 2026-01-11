@@ -1,6 +1,7 @@
 use rand::Rng;
 
 use crate::algorithms::{Selection, SelectionContext, SelectionStrategy};
+use crate::state::ServerId;
 
 #[derive(Default)]
 pub struct LeastResponseTimeStrategy {
@@ -38,7 +39,7 @@ impl SelectionStrategy for LeastResponseTimeStrategy {
         };
 
         Selection {
-            server_id: choice,
+            server_id: ServerId::from(choice),
             score: Some(min_score),
         }
     }
@@ -47,14 +48,14 @@ impl SelectionStrategy for LeastResponseTimeStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::ServerState;
+    use crate::state::{ServerId, ServerState};
     use rand::SeedableRng;
 
     #[test]
     fn least_response_time_prefers_lowest_score() {
         let servers = vec![
             ServerState {
-                id: 0,
+                id: ServerId::from(0),
                 name: "a".to_string(),
                 base_latency_ms: 30,
                 weight: 1,
@@ -64,7 +65,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 1,
+                id: ServerId::from(1),
                 name: "b".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -74,7 +75,7 @@ mod tests {
                 next_available_ms: 50,
             },
             ServerState {
-                id: 2,
+                id: ServerId::from(2),
                 name: "c".to_string(),
                 base_latency_ms: 20,
                 weight: 1,
@@ -93,7 +94,7 @@ mod tests {
         };
 
         let selection = strategy.select(&mut ctx);
-        assert_eq!(selection.server_id, 2);
+        assert_eq!(selection.server_id, ServerId::from(2));
         assert_eq!(selection.score, Some(20));
     }
 
@@ -101,7 +102,7 @@ mod tests {
     fn least_response_time_uses_seeded_tiebreak() {
         let servers = vec![
             ServerState {
-                id: 0,
+                id: ServerId::from(0),
                 name: "a".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -111,7 +112,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 1,
+                id: ServerId::from(1),
                 name: "b".to_string(),
                 base_latency_ms: 0,
                 weight: 1,
@@ -121,7 +122,7 @@ mod tests {
                 next_available_ms: 10,
             },
             ServerState {
-                id: 2,
+                id: ServerId::from(2),
                 name: "c".to_string(),
                 base_latency_ms: 20,
                 weight: 1,
@@ -147,7 +148,7 @@ mod tests {
         };
 
         let selection = strategy.select(&mut ctx);
-        assert_eq!(selection.server_id, expected);
+        assert_eq!(selection.server_id, ServerId::from(expected));
         assert_eq!(selection.score, Some(10));
     }
 }

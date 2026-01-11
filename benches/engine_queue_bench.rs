@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use lb_sim::events::{Event, Request, ScheduledEvent};
+use lb_sim::state::ServerId;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
@@ -21,7 +22,7 @@ fn build_events(count: usize) -> Vec<ScheduledEvent> {
                 ScheduledEvent::new(
                     time_ms,
                     Event::RequestComplete {
-                        server_id: idx % 8,
+                        server_id: ServerId::from(idx % 8),
                         request_id: idx,
                     },
                 )

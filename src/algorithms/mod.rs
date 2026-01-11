@@ -6,7 +6,7 @@ mod weighted_round_robin;
 use rand::RngCore;
 
 use crate::models::AlgoConfig;
-use crate::state::ServerState;
+use crate::state::{ServerId, ServerState};
 
 pub use least_connections::LeastConnectionsStrategy;
 pub use least_response_time::LeastResponseTimeStrategy;
@@ -25,7 +25,7 @@ pub struct SelectionContext<'a> {
 }
 
 pub struct Selection {
-    pub server_id: usize,
+    pub server_id: ServerId,
     pub score: Option<u64>,
 }
 

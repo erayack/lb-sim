@@ -1,10 +1,24 @@
 use serde::Serialize;
 
-pub type ServerId = usize;
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[serde(transparent)]
+pub struct ServerId(pub usize);
+
+impl From<usize> for ServerId {
+    fn from(value: usize) -> Self {
+        Self(value)
+    }
+}
+
+impl From<ServerId> for usize {
+    fn from(value: ServerId) -> Self {
+        value.0
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct ServerState {
-    pub id: usize,
+    pub id: ServerId,
     pub name: String,
     pub base_latency_ms: u64,
     pub weight: u32,

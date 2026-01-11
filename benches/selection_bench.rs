@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use lb_sim::algorithms::{build_strategy, SelectionContext};
 use lb_sim::models::AlgoConfig;
-use lb_sim::state::ServerState;
+use lb_sim::state::{ServerId, ServerState};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
@@ -11,7 +11,7 @@ const ITERATIONS: usize = 1_000;
 fn build_servers(count: usize) -> Vec<ServerState> {
     (0..count)
         .map(|idx| ServerState {
-            id: idx,
+            id: ServerId::from(idx),
             name: format!("srv-{}", idx),
             base_latency_ms: 10 + idx as u64,
             weight: 1,

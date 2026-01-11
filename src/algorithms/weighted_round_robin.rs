@@ -1,5 +1,5 @@
 use crate::algorithms::{Selection, SelectionContext, SelectionStrategy};
-use crate::state::ServerState;
+use crate::state::{ServerId, ServerState};
 
 #[derive(Default)]
 pub struct WeightedRoundRobinStrategy {
@@ -45,7 +45,7 @@ impl SelectionStrategy for WeightedRoundRobinStrategy {
             .unwrap_or_else(|idx| idx);
 
         Selection {
-            server_id: selected,
+            server_id: ServerId::from(selected),
             score: None,
         }
     }
@@ -54,14 +54,14 @@ impl SelectionStrategy for WeightedRoundRobinStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::ServerState;
+    use crate::state::{ServerId, ServerState};
     use rand::SeedableRng;
 
     #[test]
     fn weighted_round_robin_respects_weights() {
         let servers = vec![
             ServerState {
-                id: 0,
+                id: ServerId::from(0),
                 name: "a".to_string(),
                 base_latency_ms: 10,
                 weight: 2,
@@ -71,7 +71,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 1,
+                id: ServerId::from(1),
                 name: "b".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -89,16 +89,26 @@ mod tests {
             rng: &mut rng,
         };
 
-        let picks: Vec<usize> = (0..6)
+        let picks: Vec<ServerId> = (0..6)
             .map(|_| strategy.select(&mut ctx).server_id)
             .collect();
-        assert_eq!(picks, vec![0, 0, 1, 0, 0, 1]);
+        assert_eq!(
+            picks,
+            vec![
+                ServerId::from(0),
+                ServerId::from(0),
+                ServerId::from(1),
+                ServerId::from(0),
+                ServerId::from(0),
+                ServerId::from(1),
+            ]
+        );
     }
 
     #[test]
     fn weighted_round_robin_rebuilds_cache_on_server_change() {
         let servers_v1 = vec![ServerState {
-            id: 0,
+            id: ServerId::from(0),
             name: "a".to_string(),
             base_latency_ms: 10,
             weight: 1,
@@ -109,7 +119,7 @@ mod tests {
         }];
         let servers_v2 = vec![
             ServerState {
-                id: 0,
+                id: ServerId::from(0),
                 name: "a".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -119,7 +129,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 1,
+                id: ServerId::from(1),
                 name: "b".to_string(),
                 base_latency_ms: 10,
                 weight: 2,
@@ -138,7 +148,7 @@ mod tests {
                 rng: &mut rng,
             };
 
-            assert_eq!(strategy.select(&mut ctx_v1).server_id, 0);
+            assert_eq!(strategy.select(&mut ctx_v1).server_id, ServerId::from(0));
         }
 
         let mut ctx_v2 = SelectionContext {
@@ -146,9 +156,9 @@ mod tests {
             time_ms: 0,
             rng: &mut rng,
         };
-        let picks: Vec<usize> = (0..2)
+        let picks: Vec<ServerId> = (0..2)
             .map(|_| strategy.select(&mut ctx_v2).server_id)
             .collect();
-        assert_eq!(picks, vec![0, 1]);
+        assert_eq!(picks, vec![ServerId::from(0), ServerId::from(1)]);
     }
 }

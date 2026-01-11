@@ -1,6 +1,7 @@
 use rand::Rng;
 
 use crate::algorithms::{Selection, SelectionContext, SelectionStrategy};
+use crate::state::ServerId;
 
 #[derive(Default)]
 pub struct LeastConnectionsStrategy {
@@ -34,7 +35,7 @@ impl SelectionStrategy for LeastConnectionsStrategy {
         };
 
         Selection {
-            server_id: choice,
+            server_id: ServerId::from(choice),
             score: None,
         }
     }
@@ -43,14 +44,14 @@ impl SelectionStrategy for LeastConnectionsStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::ServerState;
+    use crate::state::{ServerId, ServerState};
     use rand::SeedableRng;
 
     #[test]
     fn least_connections_prefers_lowest_active_connections() {
         let servers = vec![
             ServerState {
-                id: 0,
+                id: ServerId::from(0),
                 name: "a".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -60,7 +61,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 1,
+                id: ServerId::from(1),
                 name: "b".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -70,7 +71,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 2,
+                id: ServerId::from(2),
                 name: "c".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -88,14 +89,14 @@ mod tests {
             rng: &mut rng,
         };
 
-        assert_eq!(strategy.select(&mut ctx).server_id, 1);
+        assert_eq!(strategy.select(&mut ctx).server_id, ServerId::from(1));
     }
 
     #[test]
     fn least_connections_uses_seeded_tiebreak() {
         let servers = vec![
             ServerState {
-                id: 0,
+                id: ServerId::from(0),
                 name: "a".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -105,7 +106,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 1,
+                id: ServerId::from(1),
                 name: "b".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -115,7 +116,7 @@ mod tests {
                 next_available_ms: 0,
             },
             ServerState {
-                id: 2,
+                id: ServerId::from(2),
                 name: "c".to_string(),
                 base_latency_ms: 10,
                 weight: 1,
@@ -140,6 +141,9 @@ mod tests {
             rng: &mut rng,
         };
 
-        assert_eq!(strategy.select(&mut ctx).server_id, expected);
+        assert_eq!(
+            strategy.select(&mut ctx).server_id,
+            ServerId::from(expected)
+        );
     }
 }

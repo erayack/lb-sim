@@ -8,8 +8,8 @@ use crate::error::{Error, Result};
 use crate::events::{Event, Request, ScheduledEvent};
 use crate::models::{RequestProfile, ServerConfig, SimConfig, TieBreakConfig};
 use crate::state::{
-    Assignment, EngineState, Phase1Metrics, ResponseTimePercentiles, RunMetadata, ServerState,
-    ServerSummary, ServerUtilization, SimulationResult,
+    Assignment, EngineState, Phase1Metrics, ResponseTimePercentiles, RunMetadata, ServerId,
+    ServerState, ServerSummary, ServerUtilization, SimulationResult,
 };
 
 pub struct SimulationEngine {
@@ -66,7 +66,8 @@ impl SimulationEngine {
             self.state.time_ms = next_event.time_ms;
             match next_event.event {
                 Event::RequestComplete { server_id, .. } => {
-                    let server = &mut self.state.servers[server_id];
+                    let server_idx = usize::from(server_id);
+                    let server = &mut self.state.servers[server_idx];
                     server.active_connections -= 1;
                     server.in_flight -= 1;
                 }
@@ -83,7 +84,8 @@ impl SimulationEngine {
                     let selection = self.strategy.select(&mut ctx);
                     let server_idx = selection.server_id;
 
-                    let server = &mut self.state.servers[server_idx];
+                    let server_index = usize::from(server_idx);
+                    let server = &mut self.state.servers[server_index];
                     server.active_connections += 1;
                     server.pick_count += 1;
                     server.in_flight += 1;
@@ -94,9 +96,9 @@ impl SimulationEngine {
                     let response_time = completed_at - request.arrival_time_ms;
                     let service_time = completed_at - started_at;
                     let wait_time = started_at.saturating_sub(request.arrival_time_ms);
-                    counts[server_idx] += 1;
-                    total_response_ms[server_idx] += response_time;
-                    total_service_ms[server_idx] += service_time;
+                    counts[server_index] += 1;
+                    total_response_ms[server_index] += response_time;
+                    total_service_ms[server_index] += service_time;
                     response_times.push(response_time);
                     total_wait_ms += wait_time;
                     duration_ms = duration_ms.max(completed_at);
@@ -365,7 +367,7 @@ fn init_server_state(servers: &[ServerConfig]) -> Vec<ServerState> {
         .iter()
         .enumerate()
         .map(|(id, server)| ServerState {
-            id,
+            id: ServerId::from(id),
             name: server.name.clone(),
             base_latency_ms: server.base_latency_ms,
             weight: server.weight,
@@ -456,7 +458,7 @@ mod tests {
             .iter()
             .map(|assignment| assignment.server_id)
             .collect::<Vec<_>>();
-        assert_eq!(assigned, vec![0, 0]);
+        assert_eq!(assigned, vec![ServerId::from(0), ServerId::from(0)]);
     }
 
     #[test]
