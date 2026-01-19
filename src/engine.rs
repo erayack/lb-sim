@@ -274,23 +274,7 @@ fn validate_config(config: &SimConfig) -> Result<()> {
         names.insert(server.name.clone());
     }
 
-    match config.requests {
-        RequestProfile::FixedCount(0) => return Err(Error::RequestsZero),
-        RequestProfile::FixedCount(_) => {}
-        RequestProfile::Poisson { rate, duration_ms } => {
-            if rate <= 0.0 {
-                return Err(Error::InvalidRequestRate(rate));
-            }
-            if duration_ms == 0 {
-                return Err(Error::InvalidRequestDuration(duration_ms));
-            }
-        }
-        RequestProfile::Burst { count, .. } => {
-            if count == 0 {
-                return Err(Error::RequestsZero);
-            }
-        }
-    }
+    validate_request_profile(&config.requests)?;
 
     if matches!(config.tie_break, TieBreakConfig::Seeded) && config.seed.is_none() {
         return Err(Error::InvalidTieBreakSeed);
@@ -299,27 +283,38 @@ fn validate_config(config: &SimConfig) -> Result<()> {
     Ok(())
 }
 
-fn build_requests(profile: &RequestProfile, seed: Option<u64>) -> Result<Vec<Request>> {
-    match profile {
-        RequestProfile::FixedCount(count) => {
-            if *count == 0 {
+fn validate_request_profile(profile: &RequestProfile) -> Result<()> {
+    match *profile {
+        RequestProfile::FixedCount(0) => Err(Error::RequestsZero),
+        RequestProfile::FixedCount(_) => Ok(()),
+        RequestProfile::Poisson { rate, duration_ms } => {
+            if rate <= 0.0 {
+                return Err(Error::InvalidRequestRate(rate));
+            }
+            if duration_ms == 0 {
+                return Err(Error::InvalidRequestDuration(duration_ms));
+            }
+            Ok(())
+        }
+        RequestProfile::Burst { count, .. } => {
+            if count == 0 {
                 return Err(Error::RequestsZero);
             }
-            Ok((0..*count)
-                .map(|idx| Request {
-                    id: idx + 1,
-                    arrival_time_ms: idx as u64,
-                })
-                .collect())
+            Ok(())
         }
-        RequestProfile::Poisson { rate, duration_ms } => {
-            if *rate <= 0.0 {
-                return Err(Error::InvalidRequestRate(*rate));
-            }
-            if *duration_ms == 0 {
-                return Err(Error::InvalidRequestDuration(*duration_ms));
-            }
+    }
+}
 
+fn build_requests(profile: &RequestProfile, seed: Option<u64>) -> Result<Vec<Request>> {
+    validate_request_profile(profile)?;
+    match profile {
+        RequestProfile::FixedCount(count) => Ok((0..*count)
+            .map(|idx| Request {
+                id: idx + 1,
+                arrival_time_ms: idx as u64,
+            })
+            .collect()),
+        RequestProfile::Poisson { rate, duration_ms } => {
             let mut rng = StdRng::seed_from_u64(seed.unwrap_or(0));
             let lambda_ms = rate / 1000.0;
             let mut requests = Vec::new();
@@ -348,17 +343,12 @@ fn build_requests(profile: &RequestProfile, seed: Option<u64>) -> Result<Vec<Req
 
             Ok(requests)
         }
-        RequestProfile::Burst { count, at_ms } => {
-            if *count == 0 {
-                return Err(Error::RequestsZero);
-            }
-            Ok((0..*count)
-                .map(|idx| Request {
-                    id: idx + 1,
-                    arrival_time_ms: *at_ms,
-                })
-                .collect())
-        }
+        RequestProfile::Burst { count, at_ms } => Ok((0..*count)
+            .map(|idx| Request {
+                id: idx + 1,
+                arrival_time_ms: *at_ms,
+            })
+            .collect()),
     }
 }
 
